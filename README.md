@@ -1,7 +1,7 @@
 # The Attempt to Persuade Eval (APE)
 
 📄 **Paper**: [Attempt to Persuade Eval (APE)](https://www.arxiv.org/abs/2506.02873)
-🌐 **Blog Post**: [Attempt to Persuade Eval Blog Post](https://far.ai/attempt-to-persuade-eval)
+🌐 **Blog Post**: [Attempt to Persuade Eval Blog Post](https://www.far.ai/news/attempt-to-persuade-eval)
 
 <p align="center">
   <img src="assets/APE_Persuasion.png" width="400">
