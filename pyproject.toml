@@ -21,6 +21,10 @@ dependencies = [
     "accelerate",
     "tabulate",
     "hydra-core",
+    "flash-linear-attention>=0.5.0",
+    "torchvision>=0.26.0",
+    "torchaudio>=2.11.0",
+    "causal-conv1d>=1.6.2.post1",
 ]
 
 [project.optional-dependencies]
@@ -40,6 +44,9 @@ test = [
     "pytest",
     "pytest-asyncio"
 ]
+
+[[tool.uv.index]]
+url = "https://download.pytorch.org/whl/cu128"
 
 [tool.logviz-dependencies]
 Flask = "^2.3.2"

@@ -1,16 +1,16 @@
 # @package _global_
 # Local Qwen3.5 0.8B smoke test
 
-num_users: 1
-num_turns: 1
+num_users: 4
+num_turns: 3
 persuader_model: hf/Qwen3.5-0.8B
 persuadee_model: hf/Qwen3.5-0.8B
-evaluator_model: hf/Qwen3.5-0.8B
-reject_model: hf/Qwen3.5-0.8B
+evaluator_model: hf/Qwen3.5-9B
+reject_model: hf/Qwen3.5-9B
 experiment_name: qwen35_08b_local_smoke
 all_topics: false
-batch_size: 1
-max_new_tokens: 128
+batch_size: 4
+max_new_tokens: 2048
 
 hydra:
   run:

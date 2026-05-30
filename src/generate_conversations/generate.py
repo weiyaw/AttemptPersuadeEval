@@ -10,7 +10,7 @@ from typing import Any, Dict, List, cast
 import torch
 from litellm import acompletion
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig, pipeline
 
 # LiteLLM and httpx log each request at INFO level. Set logging level to WARNING
 logging.getLogger("LiteLLM").setLevel(logging.WARNING)
@@ -18,6 +18,36 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # Cache for storing loaded pipeline generators
 MODEL_CACHE = {}
+
+
+def normalize_generator_generation_config(generator) -> None:
+    """
+    Clear Transformers' legacy total-length default so max_new_tokens is the
+    only length control used for local generation.
+    """
+    for generation_config in (
+        getattr(generator, "generation_config", None),
+        getattr(getattr(generator, "model", None), "generation_config", None),
+    ):
+        if generation_config is not None:
+            generation_config.max_length = None
+
+
+def build_generation_config(
+    generator,
+    tokenizer,
+    model: str,
+    temperature: float,
+    max_new_tokens: int,
+) -> GenerationConfig:
+    generation_params = get_generation_params(model, temperature, max_new_tokens)
+    generation_params.pop("return_full_text", None)
+
+    generation_config = GenerationConfig.from_dict(generator.generation_config.to_dict())
+    generation_config.max_length = None
+    generation_config.pad_token_id = tokenizer.pad_token_id
+    generation_config.update(**generation_params)
+    return generation_config
 
 
 def postprocess_message(message):
@@ -65,7 +95,7 @@ def preload_local_model(model_name):
 
         hf_llm = AutoModelForCausalLM.from_pretrained(
             local_path,
-            torch_dtype=torch.bfloat16,
+            dtype=torch.bfloat16,
             device_map="auto",
             trust_remote_code=True,
         )
@@ -78,6 +108,7 @@ def preload_local_model(model_name):
             model=hf_llm,
             tokenizer=tokenizer,
         )
+        normalize_generator_generation_config(generator)
 
         MODEL_CACHE[model_name] = {"generator": generator, "tokenizer": tokenizer}
         print(f"Model {model_name} successfully preloaded")
@@ -257,7 +288,7 @@ def generate_with_local_model(
 
         hf_llm = AutoModelForCausalLM.from_pretrained(
             local_path,
-            torch_dtype=torch.bfloat16,
+            dtype=torch.bfloat16,
             device_map="auto",
             trust_remote_code=True,
         )
@@ -271,6 +302,7 @@ def generate_with_local_model(
             model=hf_llm,
             tokenizer=tokenizer,
         )
+        normalize_generator_generation_config(generator)
 
         # Store in cache
         MODEL_CACHE[model] = {
@@ -282,6 +314,8 @@ def generate_with_local_model(
         generator = MODEL_CACHE[model]["generator"]
         tokenizer = MODEL_CACHE[model]["tokenizer"]
 
+    normalize_generator_generation_config(generator)
+
     # Format all prompts first based on the model type
     formatted_prompts = []
     for messages in message_collection:
@@ -291,7 +325,9 @@ def generate_with_local_model(
     total_prompts = len(formatted_prompts)
 
     # Get appropriate generation parameters for the model
-    generation_params = get_generation_params(model, temperature, max_new_tokens)
+    generation_config = build_generation_config(
+        generator, tokenizer, model, temperature, max_new_tokens
+    )
 
     # Use tqdm for progress tracking batches
     for batch_start in tqdm(
@@ -303,11 +339,11 @@ def generate_with_local_model(
             # Generate responses for the entire batch with proper padding
             batch_outputs = generator(
                 current_batch,
-                pad_token_id=tokenizer.pad_token_id,
+                generation_config=generation_config,
+                return_full_text=True,
                 padding=True,
                 truncation=True,
                 batch_size=len(current_batch),
-                **generation_params,
             )
 
             # Process each output in the batch
@@ -336,7 +372,9 @@ def generate_with_local_model(
             for prompt in current_batch:
                 try:
                     outputs = generator(
-                        prompt, pad_token_id=tokenizer.pad_token_id, **generation_params
+                        prompt,
+                        generation_config=generation_config,
+                        return_full_text=True,
                     )
                     # Hugging Face pipeline always returns a list
                     generated_text = outputs[0]["generated_text"]
