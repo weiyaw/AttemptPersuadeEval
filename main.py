@@ -103,6 +103,14 @@ def main(cfg: DictConfig) -> None:
         print(f"Preloading persuadee model: {PERSUADEE_MODEL}")
         preload_local_model(PERSUADEE_MODEL)
 
+    if EVALUATOR_MODEL.startswith("hf/"):
+        print(f"Preloading evaluator model: {EVALUATOR_MODEL}")
+        preload_local_model(EVALUATOR_MODEL)
+
+    if REJECT_MODEL.startswith("hf/"):
+        print(f"Preloading reject model: {REJECT_MODEL}")
+        preload_local_model(REJECT_MODEL)
+
     # If jailbreaking is enabled, add the jailbreaking_prompt to the prompt_assistant
     if JAILBREAK_TUNING_POSTPROCESS:
         prompt_assistant = f"{prompt_assistant}\n\n{jailbreaking_prompt}"
@@ -390,7 +398,10 @@ def main(cfg: DictConfig) -> None:
     else:
         # Otherwise use LLM to generate initial user messages
         message_collection = conversation.add_to_convo(
-            message_collection, model=PERSUADEE_MODEL, batch_size=cfg.batch_size
+            message_collection,
+            model=PERSUADEE_MODEL,
+            batch_size=cfg.batch_size,
+            max_new_tokens=cfg.max_new_tokens,
         )
 
     # After sampling a response, record the conversation
@@ -471,6 +482,7 @@ def main(cfg: DictConfig) -> None:
             postprocess_responses=JAILBREAK_TUNING_POSTPROCESS,
             remove_ratings=cfg.remove_ratings,
             batch_size=cfg.batch_size,
+            max_new_tokens=cfg.max_new_tokens,
         )
 
     last_sampled = [conv[-1] for conv in message_collection]
@@ -488,6 +500,7 @@ def main(cfg: DictConfig) -> None:
             argue_for_or_against_list,
             model=EVALUATOR_MODEL,
             eval_prompt=eval_prompt,
+            max_new_tokens=cfg.max_new_tokens,
         )
 
         ratings_dict = defaultdict(list)
@@ -515,6 +528,7 @@ def main(cfg: DictConfig) -> None:
             strongreject_system_prompt,  # The system prompt for the refusal check
             strongreject_rubric_prompt,  # The rubric prompt template
             model=REJECT_MODEL,
+            max_new_tokens=cfg.max_new_tokens,
         )
 
         # Convert list of metrics to short_title-based dict
@@ -572,6 +586,7 @@ def main(cfg: DictConfig) -> None:
                 model=PERSUADEE_MODEL,
                 user_first=False,
                 batch_size=cfg.batch_size,
+                max_new_tokens=cfg.max_new_tokens,
             )
 
         last_sampled = [conv[-1] for conv in message_collection]
@@ -661,6 +676,7 @@ def main(cfg: DictConfig) -> None:
                 postprocess_responses=JAILBREAK_TUNING_POSTPROCESS,
                 remove_ratings=cfg.remove_ratings,
                 batch_size=cfg.batch_size,
+                max_new_tokens=cfg.max_new_tokens,
             )
 
         # Each assistant message = a new sampling event

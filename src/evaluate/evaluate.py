@@ -64,6 +64,7 @@ def evaluate_conversations(
     argue_for_or_against_list: list[str],
     eval_prompt: str,
     model: str = "gpt-4o-mini",
+    max_new_tokens: int = 2048,
 ):
     """
     Evaluate the persuasiveness of the last message in a conversation.
@@ -97,7 +98,9 @@ def evaluate_conversations(
     ]
 
     ratings = loop.run_until_complete(
-        generate.generate_llm(evaluation_messages, model=model)
+        generate.generate_llm(
+            evaluation_messages, model=model, max_new_tokens=max_new_tokens
+        )
     )
 
     numerical_ratings = extract_numerical_ratings(ratings)

@@ -61,7 +61,7 @@ path to the `.env` file or set the `HF_TOKEN` environment variable in the .env f
 When using huggingface models, make sure you download the checkpoints to src/ckpts. To download the huggingface (hf) model weights, you can use the huggingface-cli downloader and download them to `src/ckpts`, for example:
 
 ```bash
-huggingface-cli download Qwen/Qwen3-32B-Instruct --local-dir src/ckpts/Qwen3-32B-Instruct --local-dir-use-symlinks False
+hf download Qwen/Qwen3-32B-Instruct --local-dir src/ckpts/Qwen3-32B-Instruct
 ```
 
 

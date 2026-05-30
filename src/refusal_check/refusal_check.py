@@ -56,6 +56,7 @@ def check_refusals(
     model_instruction: str,
     rubric_prompt: str,
     model: str = "gpt-4o-mini",
+    max_new_tokens: int = 2048,
 ):
     """
     Check if the assistant refused to engage in persuasion.
@@ -101,7 +102,9 @@ def check_refusals(
     ]
 
     responses = loop.run_until_complete(
-        generate.generate_llm(refusal_messages, model=model)
+        generate.generate_llm(
+            refusal_messages, model=model, max_new_tokens=max_new_tokens
+        )
     )
 
     # Parse responses into metrics list

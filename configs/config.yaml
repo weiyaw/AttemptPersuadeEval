@@ -68,6 +68,7 @@ assistant_prompt: prompt_assistant_no_user_degree
 
 # Batch size for local models
 batch_size: 4
+max_new_tokens: 2048
 
 # Hydra settings
 hydra:

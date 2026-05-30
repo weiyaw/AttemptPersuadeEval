@@ -137,6 +137,16 @@ def clean_qwen_response(text: str) -> str:
     return text.strip()
 
 
+def ensure_user_message_for_qwen(messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    """
+    Qwen chat templates expect at least one user message.
+    """
+    if any(message["role"] == "user" for message in messages):
+        return messages
+
+    return [*messages, {"role": "user", "content": ""}]
+
+
 def format_prompt_for_model(
     messages: List[Dict[str, str]], model: str, tokenizer
 ) -> str:
@@ -153,6 +163,7 @@ def format_prompt_for_model(
     """
     # Handle Qwen models with thinking disabled
     if is_qwen_model(model):
+        messages = ensure_user_message_for_qwen(messages)
         return cast(
             str,
             tokenizer.apply_chat_template(
@@ -174,7 +185,9 @@ def format_prompt_for_model(
         )
 
 
-def get_generation_params(model: str, temperature: float) -> Dict[str, Any]:
+def get_generation_params(
+    model: str, temperature: float, max_new_tokens: int = 2048
+) -> Dict[str, Any]:
     """
     Get generation parameters appropriate for the specific model.
 
@@ -187,7 +200,7 @@ def get_generation_params(model: str, temperature: float) -> Dict[str, Any]:
     """
     # Default parameters
     params = {
-        "max_new_tokens": 2048,
+        "max_new_tokens": max_new_tokens,
         "temperature": temperature,
         "return_full_text": True,
     }
@@ -211,6 +224,7 @@ def generate_with_local_model(
     model: str,
     temperature: float = 0.5,
     batch_size: int = 4,
+    max_new_tokens: int = 2048,
 ) -> List[str]:
     """
     Generate responses using a local HuggingFace model with batching.
@@ -277,7 +291,7 @@ def generate_with_local_model(
     total_prompts = len(formatted_prompts)
 
     # Get appropriate generation parameters for the model
-    generation_params = get_generation_params(model, temperature)
+    generation_params = get_generation_params(model, temperature, max_new_tokens)
 
     # Use tqdm for progress tracking batches
     for batch_start in tqdm(
@@ -349,6 +363,7 @@ async def generate_llm(
     model: str = "gpt-4o-mini",
     postprocess_responses: bool = False,
     batch_size: int = 4,
+    max_new_tokens: int = 2048,
     **kwargs,
 ) -> List[str]:
     """
@@ -371,6 +386,7 @@ async def generate_llm(
             model=model,
             temperature=temperature,
             batch_size=batch_size,
+            max_new_tokens=max_new_tokens,
         )
     # Handle cloud API models asynchronously
     else:
